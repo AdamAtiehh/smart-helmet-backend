@@ -159,18 +159,33 @@
     </div>
 
     <script>
-        const API_BASE = 'http://127.0.0.1:8000/api/v1';
+        // Configuration
+        const RENDER_URL = 'smart-helmet-backend-cj1x.onrender.com';
         const TOKEN = 'mock_dashboard_user'; // Mock token for auth
 
+        let apiBase = '/api/v1';
+        let wsBase = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
+
+        // If running locally (localhost or 127.0.0.1), connect to the Render backend
+        // This allows testing the dashboard locally against the real server
+        if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
+            console.log("Detected local environment. Connecting to Hosted Render Backend...");
+            apiBase = `https://${RENDER_URL}/api/v1`;
+            wsBase = `wss://${RENDER_URL}`;
+        }
+
+        const API_BASE = apiBase;
+
         // Connect to WebSocket with mock token
-        const ws = new WebSocket(`ws://127.0.0.1:8000/ws/stream?token=${TOKEN}`);
+        const wsUrl = `${wsBase}/ws/stream?token=${TOKEN}`;
+        const ws = new WebSocket(wsUrl);
         const logDiv = document.getElementById('log');
         const statusDiv = document.getElementById('connectionStatus');
 
         ws.onopen = () => {
             statusDiv.textContent = 'Connected';
             statusDiv.className = 'status connected';
-            log('System connected to telemetry stream...');
+            log(`Connected to ${wsBase}...`);
         };
 
         ws.onclose = () => {

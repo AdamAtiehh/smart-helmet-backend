@@ -7,6 +7,21 @@ import urllib.request
 import urllib.error
 import time
 
+import os
+
+# Configurable backend URL
+# Default to localhost:10000 if not set
+BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:10000")
+
+# Derive WebSocket URL
+if BACKEND_URL.startswith("https://"):
+    WS_URL = BACKEND_URL.replace("https://", "wss://")
+elif BACKEND_URL.startswith("http://"):
+    WS_URL = BACKEND_URL.replace("http://", "ws://")
+else:
+    # Fallback/Assume plain domain or IP
+    WS_URL = f"ws://{BACKEND_URL}"
+
 def make_request(url, method="GET", data=None, headers=None):
     if headers is None:
         headers = {}
@@ -25,6 +40,7 @@ def make_request(url, method="GET", data=None, headers=None):
 
 async def main():
     # Wait for server to be ready
+    print(f"Target Backend: {BACKEND_URL}")
     print("Waiting for server...")
     await asyncio.sleep(2)
 
@@ -32,7 +48,7 @@ async def main():
     try:
         print("Logging in (mock)...")
         make_request(
-            "http://127.0.0.1:8000/api/v1/users/me",
+            f"{BACKEND_URL}/api/v1/users/me",
             headers={"Authorization": "Bearer mock_dashboard_user"}
         )
         print("Login successful.")
@@ -43,7 +59,7 @@ async def main():
     try:
         print("Registering device...")
         make_request(
-            "http://127.0.0.1:8000/api/v1/devices",
+            f"{BACKEND_URL}/api/v1/devices",
             method="POST",
             data={"device_id": "helmet-pi-01", "model_name": "Mock Pi"},
             headers={"Authorization": "Bearer mock_dashboard_user"}
@@ -53,7 +69,7 @@ async def main():
         print(f"Registration failed: {e}")
 
     # 3. Send trip_start
-    uri = "ws://127.0.0.1:8000/ws/ingest"
+    uri = f"{WS_URL}/ws/ingest"
     print(f"Connecting to {uri}...")
     async with websockets.connect(uri, max_size=64 * 1024) as ws:
         # Send trip_start
