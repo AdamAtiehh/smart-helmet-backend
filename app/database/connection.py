@@ -16,15 +16,9 @@ from sqlalchemy.engine.url import make_url
 load_dotenv()
 
 DEFAULT_SQLITE_URL = "sqlite+aiosqlite:///./helmet.db"
-
-raw_db_url = os.getenv("DATABASE_URL")
-if not raw_db_url or not raw_db_url.strip():
-    DATABASE_URL = DEFAULT_SQLITE_URL
-else:
-    DATABASE_URL = raw_db_url.strip()
+DATABASE_URL = os.getenv("DATABASE_URL", DEFAULT_SQLITE_URL).strip()
 
 def _create_engine(url: str) -> AsyncEngine:
-    # validates URL, will raise early if invalid
     make_url(url)
     return create_async_engine(url, echo=False, pool_pre_ping=True)
 
