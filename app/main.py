@@ -10,8 +10,13 @@ from app.database.connection import engine
 from app.models.db_models import Base
 from app.api.api_router import api_router
 from app.services.connection_manager import manager
+from fastapi.staticfiles import StaticFiles
+
 
 app = FastAPI(title="Smart Helmet Backend (Test Run)")
+
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -43,6 +48,15 @@ async def startup_event():
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+from fastapi.responses import HTMLResponse
+
+@app.get("/", response_class=HTMLResponse)
+async def root():
+    with open("app/static/dashboard.html", encoding="utf-8") as f:
+        return f.read()
+
 
 @app.websocket("/ws/stream")
 async def ws_stream(
