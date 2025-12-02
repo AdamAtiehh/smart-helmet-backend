@@ -128,3 +128,36 @@ async def ws_ingest(websocket: WebSocket):
                 await websocket.send_text(f"❌ error: {str(e)}")
     except WebSocketDisconnect:
         pass
+
+# --- Mock Sender Control ---
+import subprocess
+import sys
+
+mock_process = None
+
+@app.post("/api/v1/mock/start")
+async def start_mock():
+    global mock_process
+    if mock_process and mock_process.poll() is None:
+        return {"status": "already running", "pid": mock_process.pid}
+    
+    # Start the mock sender as a subprocess
+    # Assuming running from root directory
+    try:
+        mock_process = subprocess.Popen([sys.executable, "app/mock_sender.py"])
+        return {"status": "started", "pid": mock_process.pid}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.post("/api/v1/mock/stop")
+async def stop_mock():
+    global mock_process
+    if mock_process and mock_process.poll() is None:
+        mock_process.terminate()
+        try:
+            mock_process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            mock_process.kill()
+        mock_process = None
+        return {"status": "stopped"}
+    return {"status": "not running"}
