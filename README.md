@@ -1,154 +1,133 @@
-🪖 Smart Helmet Backend
+Smart Helmet Backend
+--------------------
 
 Backend system for a real-time motorcycle safety helmet using FastAPI, WebSockets, ML inference, and SQLite/MySQL.
 
 This service receives telemetry from the helmet (via Raspberry Pi → mobile app → backend), stores trip data, and streams live updates to the user dashboard. It also includes background workers for data persistence and (later) machine-learning-based crash detection.
 
-📁 Project Structure
+---------------------------------------------------
+Project Structure
+---------------------------------------------------
+
 smart_helmet_backend/
-│
+
 ├── app/
-│   ├── main.py                 # FastAPI app entrypoint (REST + WebSockets + workers)
+│   ├── main.py                 – FastAPI app entrypoint (REST + WebSockets + workers)
 │   │
 │   ├── models/
-│   │   ├── db_models.py        # SQLAlchemy ORM models (Device, Telemetry, Trip, etc.)
-│   │   └── schemas.py          # Pydantic request/response models
+│   │   ├── db_models.py        – SQLAlchemy ORM models
+│   │   └── schemas.py          – Pydantic request/response models
 │   │
 │   ├── database/
-│   │   └── connection.py       # Async SQLAlchemy engine + session management
+│   │   └── connection.py       – Async SQLAlchemy engine + session handling
 │   │
 │   ├── workers/
-│   │   ├── persist_worker.py   # Background queue → writes telemetry & trips to DB
-│   │   └── inference_worker.py # (Later) ML inference worker for crash detection
+│   │   ├── persist_worker.py   – Background queue → saves telemetry/trips
+│   │   └── inference_worker.py – (Future) ML model inference worker
 │   │
 │   ├── ml/
-│   │   ├── model.onnx          # Placeholder for trained crash-detection model
-│   │   └── predictor.py        # Loads/executes ONNX model
+│   │   ├── model.onnx          – Placeholder for crash-detection ML model
+│   │   └── predictor.py        – Runs ONNX model
 │   │
 │   ├── services/
-│   │   ├── connection_manager.py # Manages connected WebSocket clients
-│   │   └── broadcaster.py        # Sends real-time data to subscribed users
+│   │   ├── connection_manager.py – Tracks connected WebSocket users
+│   │   └── broadcaster.py        – Sends real-time updates to /ws/stream
 │   │
 │   ├── api/
-│   │   └── api_router.py       # Organized API endpoints (/api/v1)
+│   │   └── api_router.py       – Organizes API endpoints (/api/v1)
 │   │
 │   ├── static/
-│   │   └── dashboard.html      # Simple WebSocket-powered debug dashboard
+│   │   └── dashboard.html      – Simple front-end dashboard for debugging
 │   │
-│   └── mock_sender.py          # Script that simulates telemetry packets
-│
-├── helmet.db                   # Local SQLite database (auto-created)
-├── .env                        # Optional: DATABASE_URL, Firebase keys, model paths
+│   └── mock_sender.py          – Sends fake telemetry for testing
+
+├── helmet.db                   – SQLite database (auto-created)
+├── .env                        – Optional: DATABASE_URL, Firebase, ML paths
 └── README.md
 
-🚀 Features
-Real-time ingest pipeline
 
-/ws/ingest receives live telemetry:
+---------------------------------------------------
+Main Features
+---------------------------------------------------
 
-GPS location
+1. Real-time Telemetry Ingestion  
+   • /ws/ingest receives live telemetry:  
+     - GPS  
+     - Speed  
+     - Accelerometer / Gyroscope  
+     - Heart rate (planned)  
+     - Stress levels (planned)  
+     - Crash-probability signals (ML, planned)  
 
-Speed
+   • Telemetry is validated, queued, saved to DB, and broadcast.
 
-Acceleration / gyroscope data
+2. Real-time Dashboard Updates  
+   • /ws/stream pushes live updates to the authenticated user  
+   • Used for live map tracking, live speed, crash alerts, trip progress  
+   • Works with static/dashboard.html
 
-Heart rate (planned)
+3. Background Workers  
+   • Persist Worker → Saves telemetry + trip events without blocking WebSockets  
+   • ML Worker (future) → Runs crash detection model and sends alerts
 
-Stress levels (planned)
+4. Database Flexibility  
+   • SQLite (default local development)  
+   • MySQL/Postgres (optional for production)
 
-Crash detection signals (via ML, planned)
+---------------------------------------------------
+Local Development
+---------------------------------------------------
 
-Telemetry is validated using Pydantic models, queued, stored, and broadcast to the user.
+1. Install dependencies:
+   pip install -r requirements.txt
 
-Real-time dashboard updates
+2. Start FastAPI server:
+   uvicorn app.main:app --reload
 
-/ws/stream pushes live updates to the authenticated user.
+3. Open API documentation:
+   http://127.0.0.1:8000/docs
 
-Useful for:
-
-Live map tracking
-
-Live speed & sensor data
-
-Crash alerts
-
-Trip progress
-
-Works with the included static/dashboard.html test page.
-
-Background workers
-
-Two async workers run alongside FastAPI:
-
-Persist Worker
-
-Writes telemetry & trip events to the database.
-
-Prevents slowing down WebSocket handling.
-
-Inference Worker (future)
-
-Loads ONNX ML model.
-
-Detects crash probability based on incoming telemetry.
-
-Sends live alerts through the broadcast manager.
-
-Database flexibility
-
-Supports both:
-
-SQLite (default for local development)
-
-MySQL / Postgres (production-ready via DATABASE_URL)
-
-🧪 Local Development
-1. Install dependencies
-pip install -r requirements.txt
-
-2. Start the server
-uvicorn app.main:app --reload
-
-3. Open API docs
-
-http://127.0.0.1:8000/docs
-
-4. View the live dashboard
-
-http://127.0.0.1:8000/static/dashboard.html
-
-📡 WebSocket Endpoints
-ws://host/ws/ingest
-
-Used by the mobile app / Raspberry Pi to stream telemetry.
-
-ws://host/ws/stream?token=USER_TOKEN
-
-Used by the dashboard to receive data in real time.
-
-📦 Simulating Data (optional)
-
-You can simulate telemetry without a helmet or mobile app:
-
-python app/mock_sender.py
+4. View live dashboard:
+   http://127.0.0.1:8000/static/dashboard.html
 
 
-This connects to /ws/ingest and streams random sensor events.
+---------------------------------------------------
+WebSocket Endpoints
+---------------------------------------------------
 
-🔒 Authentication
+1. ws://host/ws/ingest  
+   → Helmet/mobile app sends telemetry here
 
-Firebase token verification is supported.
+2. ws://host/ws/stream?token=USER_TOKEN  
+   → Dashboard receives real-time updates
 
-When Firebase credentials are missing, the backend automatically switches to mocked auth mode (useful for dev & Burp Suite testing).
 
-🛠️ Roadmap / Next Steps
+---------------------------------------------------
+Simulate Telemetry (for testing)
+---------------------------------------------------
 
-Crash detection ML model (ONNX)
+Run:
+   python app/mock_sender.py
 
-Trip summary analytics
+This sends random telemetry events to /ws/ingest.
 
-Stress & health signals
 
-Admin dashboard with charts
+---------------------------------------------------
+Authentication
+---------------------------------------------------
 
-Push notifications on crash events
+• Firebase token verification supported  
+• When Firebase credentials are missing → backend switches to MOCK MODE  
+  (useful for development and Burp testing)
+
+
+---------------------------------------------------
+Roadmap / Future Work
+---------------------------------------------------
+
+• ONNX crash detection model  
+• Trip summary statistics  
+• User health analytics  
+• Admin dashboard (graphs, maps, logs)  
+• Push notifications for crash detection  
+• More advanced sensor classification
